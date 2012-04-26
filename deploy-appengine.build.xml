@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="deploy appengine project" xmlns="http://nant.sf.net/release/0.85/nant.xsd" default="deploy">
+  <description>
+    This script deploys your application to Google AppEngine without user interaction needed. It does 
+    this by generating a script with your given parameters, executing it to upload your project and removing
+    the batch file.
+    
+    SECURITY NOTE:
+      Your password is saved to the batch file before execution and it is removed afterwards. If debugmode
+      is enabled the script will not be removed. Your password will not be echo'ed to the Console.Out
+      because multiple build servers capture the console output.
+
+    LICENSE:
+      Original version by Mark van Straten - Q42 - mark@q42.nl
+      Sourcecode located at github.com - git@github.com:Q42/appengine-ci-scripts.git
+      This software is kindly granted to the community and licensed under GNU GPL-3.0 - see supplied LICENSE.TXT for details    
+    
+    TODO:
+      [ ] Make option for auto-publish this version as active version in appengine
+      [ ] Generate better replace rule for the version because AppEngine only allows letters,digits & hyphens
+      [ ] Figure out how we can delete the batchfile even if the deploy procedure failed.
+    
+    USAGE:
+      C:\projects\my-super-duper-project\releases\nant -buildfile:deploy-appengine.build.xml 
+        -D:application-id={your-appid-in-appengine}
+        -D:application-version=nightly-1.2.3 
+        -D:appengine-username={google-username@gmail.com}
+        -D:appengine-password={yourpassword}
+        -D:uncompressed-project-war-path="C:\projects\my-super-duper-project\releases\my-super-duper-project-1.2.3\" 
+        -D:gae-sdk-tools-path="C:\appengine-java-sdk\appengine-java-sdk-1.6.4.1"
+    
+    PREREQUIREMENTS:
+      * Tested with Nant 0.86 - http://nant.sourceforge.net/
+      * Google App Engine Java SDK - https://developers.google.com/appengine/downloads
+    
+    REMARKS:
+      * This script does nothing to prevent you from reaching the max-version (10) limit of Google AppEngine.
+  </description>
+  
+  <!-- parameters which need to be passed from the command line -->  
+  <property name="application-id" value="" overwrite="false"/>
+  <property name="application-version" value="" overwrite="false" />
+  <property name="appengine-username" value="" overwrite="false"/>
+  <property name="appengine-password" value="" overwrite="false"/>  
+  <property name="uncompressed-project-war-path" value="" overwrite="false"/>
+  <property name="gae-sdk-tools-path" value="" overwrite="false"/>
+
+  <property name="debug" value="false" overwrite="false"/>
+  <if test="${debug != 'false'}">
+    <echo message="DEBUGMODE ENABLED - not deleting batch script afterwards. "/>
+    <echo message="WARNING - SECURITY ISSUE: Do NOT forget to disable debugmode in production. Your password is saved in the generated script"/>
+  </if>  
+  
+  <!-- statics -->
+  <property name="appengine-webxml-filepath" value="${uncompressed-project-war-path}\WEB-INF\appengine-web.xml" readonly="true"/>
+  <property name="gae-sdk-appcfg-exe" value="${gae-sdk-tools-path}\bin\appcfg.cmd" readonly="true"/>
+  <!-- TODO: fix this to replace all non-compatible chars to hyphens. for now: only . and space are replaced -->
+  <property name="gae-compatible-application-version" value="${string::replace(string::replace(application-version, '.', '-'), ' ', '-')}" readonly="true"/>  
+  
+  <property name="deploy-batchfile-name" value="deploy-${application-id}-${gae-compatible-application-version}.bat" readonly="true" />
+  <property name="deploy-batchfile-filepath" value="${uncompressed-project-war-path}\..\${deploy-batchfile-name}" readonly="true" />  
+  
+  <target name="verify-parameters-passed-via-commandline">
+    <if test="${application-id == ''}"><fail message="'application-id' not passed via commandline" failonerror="true"/></if>  
+    <if test="${application-version == ''}"><fail message="'application-version' not passed via commandline" failonerror="true"/></if>      
+    <if test="${appengine-username == ''}"><fail message="'appengine-username' not passed via commandline" failonerror="true"/></if>      
+    <if test="${appengine-password == ''}"><fail message="'appengine-password' not passed via commandline" failonerror="true"/></if>      
+    <if test="${uncompressed-project-war-path == ''}"><fail message="'uncompressed-project-war-path' not passed via commandline" failonerror="true"/></if>      
+    <if test="${gae-sdk-tools-path == ''}"><fail message="'gae-sdk-tools-path' not passed via commandline" failonerror="true"/></if>      
+    
+    <echo message="Parameters given:"/>
+    <echo message="application-id: ${application-id}"/>
+    <echo message="application-version: ${application-version}"/>
+    <echo message="appengine-username: ${appengine-username}"/>
+    <echo message="appengine-password: length=${string::get-length(appengine-password)}"/>
+    <echo message="uncompressed-project-war-path: ${uncompressed-project-war-path}"/>
+    <echo message="gae-sdk-tools-path: ${gae-sdk-tools-path}"/>
+  </target>
+  
+  <target name="verify-paths-exist" description="verify if we can find the required files/paths" depends="verify-parameters-passed-via-commandline">
+    <!-- verify project structure on disk -->
+    <if test="${not directory::exists(uncompressed-project-war-path)}"><fail message="Could not find compiled but uncompressed WAR directory '${uncompressed-project-war-path}'" failonerror="true"/></if>
+    <if test="${not file::exists(appengine-webxml-filepath)}"><fail message="Could not locate 'appengine-web.xml' at '${appengine-webxml-filepath}', not pointing to appengine project wardir?" failonerror="true"/></if>    
+    
+    <!-- verify gae sdk presence -->
+    <if test="${not directory::exists(gae-sdk-tools-path)}"><fail message="Could not locate GAE Java SDK Tools dir at '${gae-sdk-tools-path}'" failonerror="true"/></if>    
+    <if test="${not file::exists(gae-sdk-appcfg-exe)}"><fail message="Could not locate GAE 'appcfg.cmd' in \bin dir of gae sdk: '${gae-sdk-appcfg-exe}', not pointing to correct dir?" failonerror="true"/></if>    
+  </target>  
+  
+  <target name="correct-appengine-xml" depends="verify-paths-exist" description="write new data in webxml">  
+    <!-- 
+    This is not needed because we provide the -application and -version to the AppEngin appcfg.cmd 
+    (which overwrites the settings from appengine-web.xml) but makes the deploy feel nice because even
+    if this script fails you can see that the deploy package is correct and ready to go
+    -->   
+    <echo message="writing application-id '${application-id}' in appengine-web.xml file"/>    
+    <xmlpoke file="${appengine-webxml-filepath}" value="${application-id}" xpath="gae:appengine-web-app/gae:application">
+      <namespaces>
+        <namespace prefix="gae" uri="http://appengine.google.com/ns/1.0" />
+      </namespaces>
+    </xmlpoke>
+    
+    <echo message="writing application-version '${application-version}' in appengine-web.xml file"/>
+    <xmlpoke file="${appengine-webxml-filepath}" value="${application-version}" xpath="gae:appengine-web-app/gae:version">
+      <namespaces>
+        <namespace prefix="gae" uri="http://appengine.google.com/ns/1.0" />
+      </namespaces>
+    </xmlpoke>    
+    
+  </target>
+
+  <target name="deploy" depends="correct-appengine-xml">
+    <!-- verify the batch file does not exist, or delete it -->
+    <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)}"/>
+    
+    <!-- generate batch file for executing -->   
+    <echo message="creating temp batch file: ${deploy-batchfile-filepath}"/>
+    <echo file="${deploy-batchfile-filepath}">@echo ${appengine-password} |  "${gae-sdk-appcfg-exe}" --email=${appengine-username} --version=${gae-compatible-application-version} --passin update "${uncompressed-project-war-path}"</echo>    
+    
+    <!-- execute batch file for deploy -->
+    <!-- misschien moet het zo: <exec program="ConsoleTest.exe" basedir="${test.dir}"> -->
+    <echo message="Going to deploy '${application-id}' as version '${gae-compatible-application-version}' on AppEngine"/>
+    <exec program="${deploy-batchfile-filepath}" />
+    
+    <!-- cleanup execute batch file -->
+    <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)}"/>
+  </target>
+</project>
