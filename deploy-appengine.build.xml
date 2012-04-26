@@ -121,8 +121,10 @@
     <!-- misschien moet het zo: <exec program="ConsoleTest.exe" basedir="${test.dir}"> -->
     <echo message="Going to deploy '${application-id}' as version '${gae-compatible-application-version}' on AppEngine"/>
     <exec program="${deploy-batchfile-filepath}" />
-    
+       
     <!-- cleanup execute batch file -->
     <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)}"/>
+    
+    <echo message="Application succesfully deployed to http://${gae-compatible-application-version}.appspot.com"/>    
   </target>
 </project>
