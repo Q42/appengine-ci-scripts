@@ -17,7 +17,7 @@
     
     TODO:
       [ ] Make option for auto-publish this version as active version in appengine
-      [ ] Generate better replace rule for the version because AppEngine only allows letters,digits & hyphens
+      [ ] Generate better replace rule for the version because AppEngine only allows letters,digits &amp; hyphens
       [ ] Figure out how we can delete the batchfile even if the deploy procedure failed.
     
     USAGE:
