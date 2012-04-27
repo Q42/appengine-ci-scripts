@@ -34,9 +34,9 @@ This software is kindly granted to the community and licensed under GNU GPL-3.0 
 
 TODO
 ===========================
-[ ] Make option for auto-publish this version as active version in appengine
-[ ] Generate better replace rule for the version because AppEngine only allows letters,digits & hyphens
-[ ] Figure out how we can delete the batchfile even if the deploy procedure failed.
+* [ ] Make option for auto-publish this version as active version in appengine
+* [ ] Generate better replace rule for the version because AppEngine only allows letters,digits & hyphens
+* [ ] Figure out how we can delete the batchfile even if the deploy procedure failed.
 
 REMARKS
 ===========================
