@@ -28,6 +28,11 @@
         -D:appengine-password={yourpassword}
         -D:uncompressed-project-war-path="C:\projects\my-super-duper-project\releases\my-super-duper-project-1.2.3\" 
         -D:gae-sdk-tools-path="C:\appengine-java-sdk\appengine-java-sdk-1.6.4.1"
+        -D:set-default-version=true
+    
+      set-default-version=true
+      optional argument, default behaviour = false. When true will instruct AppEngine to start serving the just 
+      deployed application as the default version.    
     
     PREREQUIREMENTS:
       * Tested with Nant 0.86 - http://nant.sourceforge.net/
@@ -44,6 +49,7 @@
   <property name="appengine-password" value="" overwrite="false"/>  
   <property name="uncompressed-project-war-path" value="" overwrite="false"/>
   <property name="gae-sdk-tools-path" value="" overwrite="false"/>
+  <property name="set-default-version" value="false" overwrite="false"/>
 
   <property name="debug" value="false" overwrite="false"/>
   <if test="${debug != 'false'}">
@@ -59,6 +65,9 @@
   
   <property name="deploy-batchfile-name" value="deploy-${application-id}-${gae-compatible-application-version}.bat" readonly="true" />
   <property name="deploy-batchfile-filepath" value="${uncompressed-project-war-path}\..\${deploy-batchfile-name}" readonly="true" />  
+
+  <property name="setdefaultapp-batchfile-name" value="setdefaultapp-${application-id}-${gae-compatible-application-version}.bat" readonly="true" />
+  <property name="setdefaultapp-batchfile-filepath" value="${uncompressed-project-war-path}\..\${setdefaultapp-batchfile-name}" readonly="true" />    
   
   <target name="verify-parameters-passed-via-commandline">
     <if test="${application-id == ''}"><fail message="'application-id' not passed via commandline" failonerror="true"/></if>  
@@ -73,6 +82,7 @@
     <echo message="application-version: ${application-version}"/>
     <echo message="appengine-username: ${appengine-username}"/>
     <echo message="appengine-password: length=${string::get-length(appengine-password)}"/>
+    <echo message="set-default-version: ${set-default-version}"/>    
     <echo message="uncompressed-project-war-path: ${uncompressed-project-war-path}"/>
     <echo message="gae-sdk-tools-path: ${gae-sdk-tools-path}"/>
   </target>
@@ -115,7 +125,7 @@
     
     <!-- generate batch file for executing -->   
     <echo message="creating temp batch file: ${deploy-batchfile-filepath}"/>
-    <echo file="${deploy-batchfile-filepath}">@echo ${appengine-password} |  "${gae-sdk-appcfg-exe}" --email=${appengine-username} --version=${gae-compatible-application-version} --passin update "${uncompressed-project-war-path}"</echo>    
+    <echo file="${deploy-batchfile-filepath}">@echo ${appengine-password} |  "${gae-sdk-appcfg-exe}" --email=${appengine-username} --application=${application-id} --version=${gae-compatible-application-version} --passin update "${uncompressed-project-war-path}"</echo>    
     
     <!-- execute batch file for deploy -->
     <!-- misschien moet het zo: <exec program="ConsoleTest.exe" basedir="${test.dir}"> -->
@@ -125,6 +135,27 @@
     <!-- cleanup execute batch file -->
     <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)}"/>
     
-    <echo message="Application succesfully deployed to http://${gae-compatible-application-version}.appspot.com"/>    
+    <echo message="Application succesfully deployed to http://${gae-compatible-application-version}.${application-id}.appspot.com"/>    
+    
+    <!-- if needed set version as active published -->
+    <call target="set-default-application" if="${set-default-version == true}" cascade="false"/>
+  </target>
+  
+  <target name="set-default-application" depends="deploy">
+    <!-- verify the batch file does not exist, or delete it -->
+    <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)}"/>  
+  
+    <!-- generate batch file for executing -->   
+    <echo message="creating temp batch file: ${setdefaultapp-batchfile-name}"/>
+    <echo file="${setdefaultapp-batchfile-filepath}">@echo ${appengine-password} |  "${gae-sdk-appcfg-exe}" --email=${appengine-username} --application=${application-id} --version=${gae-compatible-application-version} --passin set_default_version "${uncompressed-project-war-path}"</echo>      
+  
+    <!-- execute batch file for setting default published version -->
+    <echo message="Going to set version '${gae-compatible-application-version}' as default version on AppEngine"/>
+    <exec program="${setdefaultapp-batchfile-filepath}" />
+       
+    <!-- cleanup execute batch file -->
+    <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)}"/>
+    
+    <echo message="Application succesfully set as active version on http://${application-id}.appspot.com"/>
   </target>
 </project>

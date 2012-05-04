@@ -18,7 +18,15 @@ USAGE
     -D:appengine-password={yourpassword}
     -D:uncompressed-project-war-path="C:\projects\my-super-duper-project\releases\my-super-duper-project-1.2.3\" 
     -D:gae-sdk-tools-path="C:\appengine-java-sdk\appengine-java-sdk-1.6.4.1"
+    -D:set-default-version=true
 ```
+
+```
+  -D:set-default-version=true
+  optional argument, default behaviour = false. When true will instruct AppEngine to start serving the just 
+  deployed application as the default version.
+```
+
 
 SECURITY NOTE
 ===========================
