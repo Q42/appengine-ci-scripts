@@ -141,7 +141,7 @@
     <call target="set-default-application" if="${set-default-version == 'true'}" cascade="false"/>
   </target>
   
-  <target name="set-default-application" depends="deploy">
+  <target name="set-default-application">
     <!-- verify the batch file does not exist, or delete it -->
     <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)}"/>  
   
