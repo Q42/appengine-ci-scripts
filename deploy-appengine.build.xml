@@ -18,7 +18,6 @@
     TODO:
       [ ] Generate better replace rule for the version because AppEngine only allows letters,digits &amp; hyphens
       [ ] Figure out how we can delete the batchfile even if the deploy procedure failed.
-      [ ] Not delete batchfiles afterwards in debugmode
     
     USAGE:
       C:\projects\my-super-duper-project\releases\nant -buildfile:deploy-appengine.build.xml 
