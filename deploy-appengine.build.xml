@@ -133,7 +133,7 @@
     <exec program="${deploy-batchfile-filepath}" />
        
     <!-- cleanup execute batch file -->
-    <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)} AND ${debug != 'true'}"/>
+    <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)}"/><!-- AND ${debug != 'true'} oid ?-->
     
     <echo message="Application succesfully deployed to http://${gae-compatible-application-version}.${application-id}.appspot.com"/>    
     
@@ -154,7 +154,7 @@
     <exec program="${setdefaultapp-batchfile-filepath}" />
        
     <!-- cleanup execute batch file -->
-    <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)} AND ${debug != 'true'}"/>
+    <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)}"/><!-- AND ${debug != 'true'} oid ?-->
     
     <echo message="Application succesfully set as active version on http://${application-id}.appspot.com"/>
   </target>
