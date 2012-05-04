@@ -16,9 +16,9 @@
       This software is kindly granted to the community and licensed under GNU GPL-3.0 - see supplied LICENSE.TXT for details    
     
     TODO:
-      [ ] Make option for auto-publish this version as active version in appengine
       [ ] Generate better replace rule for the version because AppEngine only allows letters,digits &amp; hyphens
       [ ] Figure out how we can delete the batchfile even if the deploy procedure failed.
+      [ ] Not delete batchfiles afterwards in debugmode
     
     USAGE:
       C:\projects\my-super-duper-project\releases\nant -buildfile:deploy-appengine.build.xml 
@@ -133,12 +133,12 @@
     <exec program="${deploy-batchfile-filepath}" />
        
     <!-- cleanup execute batch file -->
-    <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)}"/>
+    <delete file="${deploy-batchfile-filepath}" if="${file::exists(deploy-batchfile-filepath)} AND ${debug != 'true'}"/>
     
     <echo message="Application succesfully deployed to http://${gae-compatible-application-version}.${application-id}.appspot.com"/>    
     
     <!-- if needed set version as active published -->
-    <call target="set-default-application" if="${set-default-version == true}" cascade="false"/>
+    <call target="set-default-application" if="${set-default-version == 'true'}" cascade="false"/>
   </target>
   
   <target name="set-default-application" depends="deploy">
@@ -154,7 +154,7 @@
     <exec program="${setdefaultapp-batchfile-filepath}" />
        
     <!-- cleanup execute batch file -->
-    <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)}"/>
+    <delete file="${setdefaultapp-batchfile-filepath}" if="${file::exists(setdefaultapp-batchfile-filepath)} AND ${debug != 'true'}"/>
     
     <echo message="Application succesfully set as active version on http://${application-id}.appspot.com"/>
   </target>
