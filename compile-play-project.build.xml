@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="Compile Appengine Project" xmlns="http://nant.sf.net/release/0.85/nant.xsd" default="package">
+  <description>
+    Use this script to generate the uncompressed war directory of your play project
+  
+    USAGE:
+      Run this script from the root directory containing your play project directory
+      
+      RootDir
+       |
+       +-> play project (ie MyPlayProject)
+       
+    CommandLine:
+      C:\RootDir\nant -buildfile:build\compile-play-project.build.xml 
+        -D:play-project-dir="MyPlayProject"
+        -D:output-war-directory="MyPlayProject-OutputWar"
+        -D:play-framework-executable-path="C:\Tools\play-1.2.4\play.bat"
+        -D:exclude-dirs-pattern="test:test-result:mydirtoexclude" [default='test:test-result:build']
+  
+      This will generate your (uncompressed) war contents in RootDir\MyPlayProject-OutputWar
+      
+    C:\Tools\play-1.2.4\play.bat war %play-projectdir-name% -o %portalservice-output-directory-name% --deps --exclude=test:test-result:build
+  </description>
+  <property name="play-project-dir" value="" overwrite="false"/>
+  <property name="play-framework-executable-path" value="" overwrite="false" />
+  <property name="output-war-directory" value="" overwrite="false" />
+  <property name="exclude-dirs-pattern" value="test:test-result:build" overwrite="false"/>
+  
+  <property name="current-dir" value="${directory::get-current-directory()}" />
+ 
+  <target name="verify-parameters-passed-via-commandline">
+    <if test="${play-project-dir == ''}"><fail message="'play-project-dir' not passed via commandline" failonerror="true"/></if>  
+    <if test="${play-framework-executable-path == ''}"><fail message="'play-framework-executable-path' not passed via commandline" failonerror="true"/></if>      
+    <if test="${output-war-directory == ''}"><fail message="'output-war-directory' not passed via commandline" failonerror="true"/></if>      
+    
+    <echo message="Parameters given:"/>
+    <echo message="play-project-dir: ${play-project-dir}"/>
+    <echo message="play-framework-executable-path: ${play-framework-executable-path}"/>
+    <echo message="output-war-directory: ${output-war-directory}"/>
+    <echo message="exclude-dirs-pattern: ${exclude-dirs-pattern}"/>    
+    
+    <echo message="current-working-dir: ${current-dir}"/>
+  </target>  
+  
+  <target name="verify-paths-exist" description="verify if we can find the required files/paths" depends="verify-parameters-passed-via-commandline">
+  
+    <if test="${not file::exists(play-framework-executable-path)}">
+      <fail message="Could not locate 'play.bat' at 'play-framework-executable-path'='${play-framework-executable-path}', not pointing to play framework executable?" failonerror="true"/>
+    </if>
+    
+    <property name="play-project-dir-path" value="${current-dir}\${play-project-dir}" />    
+    <if test="${not directory::exists(play-project-dir-path)}">
+      <fail message="Could not locate play project dir at '${play-project-dir-path}'. Working dir not rootdir?" failonerror="true"/>
+    </if>
+    <echo message="all exists"/>
+  </target>   
+  
+
+  <target name="package" depends="verify-paths-exist"> 
+    <echo message="Going to compile play project."/>
+    <echo message="${play-framework-executable-path} war ${current-dir}\${play-project-dir} -o ${current-dir}\${output-war-directory} --deps --exclude=${exclude-dirs-pattern}" />
+    <exec program="${play-framework-executable-path}" basedir="${current-dir}" commandline="war ${current-dir}\${play-project-dir} -o ${current-dir}\${output-war-directory} --deps --exclude=${exclude-dirs-pattern}" />
+  </target>    
+</project>
